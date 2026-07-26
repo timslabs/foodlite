@@ -17,7 +17,7 @@ class ZomatoPosDriver extends AbstractDriver
 
     public function getName(): string
     {
-        return 'zomato_pos';
+        return 'zomato-pos';
     }
 
     public function client(?ClientInterface $httpClient = null): PosClient

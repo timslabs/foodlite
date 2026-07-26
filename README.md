@@ -1,15 +1,18 @@
 # Foodlite
 
-Laravel package for multi-provider food API integrations with a unified driver interface.
+Laravel package for multi-provider food API integrations with a unified driver interface — Socialite-style.
 
-Built-in drivers:
+```php
+Foodlite::driver('zomato')->search([...]);
+Foodlite::driver('zomato-pos')->confirmOrder([...]);
+```
+
+## Drivers
 
 | Driver | Package | Purpose |
 |--------|---------|---------|
 | `zomato` | [`tims/zomato-php-sdk`](https://packagist.org/packages/tims/zomato-php-sdk) | Restaurant API v2.1 (discovery / search) |
-| `zomato_pos` | [`tims/zomato-pos-php-sdk`](https://packagist.org/packages/tims/zomato-pos-php-sdk) | POS Integration (menu, orders, outlets) |
-
-Multiple drivers can be used in the same request. Custom drivers can be registered with `Foodlite::extend()`.
+| `zomato-pos` | [`tims/zomato-pos-php-sdk`](https://packagist.org/packages/tims/zomato-pos-php-sdk) | POS Integration (menu, orders, outlets) |
 
 ## Requirements
 
@@ -31,14 +34,16 @@ php artisan vendor:publish --tag=foodlite-config
 
 ## Configuration
 
+Add credentials for each provider your application uses (same idea as Socialite providers in `config/services.php`):
+
 ```env
 FOODLITE_DRIVER=zomato
 
-# Restaurant API (zomato)
+# zomato — Restaurant API
 ZOMATO_USER_KEY=your-user-key
 # ZOMATO_BASE_URL=https://developers.zomato.com/api/v2.1
 
-# POS Integration API (zomato_pos)
+# zomato-pos — POS Integration API
 ZOMATO_POS_API_KEY=your-pos-api-key
 # ZOMATO_POS_BASE_URL=https://api.zomato.com
 # ZOMATO_POS_API_KEY_HEADER=api-key
@@ -54,7 +59,7 @@ return [
             'base_url' => env('ZOMATO_BASE_URL'),
             'guzzle' => [],
         ],
-        'zomato_pos' => [
+        'zomato-pos' => [
             'api_key' => env('ZOMATO_POS_API_KEY'),
             'base_url' => env('ZOMATO_POS_BASE_URL'),
             'api_key_header' => env('ZOMATO_POS_API_KEY_HEADER', 'api-key'),
@@ -64,50 +69,78 @@ return [
 ];
 ```
 
-## Usage
+## Authentication / usage
 
-### Single driver (default)
-
-```php
-use Tims\Foodlite\Facades\Foodlite;
-
-$categories = Foodlite::driver()->categories();
-```
-
-### Multiple drivers at once
+Like Socialite, pick a driver by name and call its methods:
 
 ```php
 use Tims\Foodlite\Facades\Foodlite;
 
-$discovery = Foodlite::zomato();       // or Foodlite::driver('zomato')
-$pos = Foodlite::zomatoPos();          // or Foodlite::driver('zomato_pos')
-
-$results = $discovery->search([
+// Restaurant discovery
+$results = Foodlite::driver('zomato')->search([
     'q' => 'pizza',
     'lat' => 28.6139,
     'lon' => 77.2090,
     'count' => 10,
 ]);
 
-$pos->confirmOrder([
+$restaurant = Foodlite::driver('zomato')->restaurant(16774318);
+
+// POS — menu, orders, outlets
+Foodlite::driver('zomato-pos')->confirmOrder([
     'order_id' => 99,
     'restaurant_id' => 123,
 ]);
 
-$pos->updateDeliveryStatus([
+Foodlite::driver('zomato-pos')->updateDeliveryStatus([
     'restaurant_id' => 123,
     'delivery_status' => true,
 ]);
 ```
 
+### Multiple drivers in one request
+
+Configure both providers, then use whichever you need — same as using GitHub and Google with Socialite:
+
+```php
+use Tims\Foodlite\Facades\Foodlite;
+
+$discovery = Foodlite::driver('zomato');
+$pos = Foodlite::driver('zomato-pos');
+
+$discovery->categories();
+$pos->getDeliveryStatus(['restaurant_id' => 123]);
+```
+
+### Dynamic driver selection
+
+```php
+public function search(string $provider)
+{
+    abort_unless(in_array($provider, ['zomato', 'zomato-pos'], true), 404);
+
+    return Foodlite::driver($provider)->client();
+}
+```
+
+### Default driver
+
+When you omit the name, the configured default is used:
+
+```php
+Foodlite::driver()->categories(); // uses FOODLITE_DRIVER / config default
+```
+
 ### Underlying SDK clients
 
 ```php
-$zomatoClient = Foodlite::zomato()->client();      // Tims\Zomato\ZomatoClient
-$posClient = Foodlite::zomatoPos()->client();      // Tims\ZomatoPos\PosClient
+$zomatoClient = Foodlite::driver('zomato')->client();      // Tims\Zomato\ZomatoClient
+$posClient = Foodlite::driver('zomato-pos')->client();     // Tims\ZomatoPos\PosClient
 ```
 
-### Zomato driver methods (`zomato`)
+## Driver methods
+
+### `zomato`
 
 | Method | Description |
 |--------|-------------|
@@ -125,7 +158,7 @@ $posClient = Foodlite::zomatoPos()->client();      // Tims\ZomatoPos\PosClient
 | `search($params)` | Search restaurants |
 | `client()` | Raw `ZomatoClient` |
 
-### Zomato POS driver methods (`zomato_pos`)
+### `zomato-pos`
 
 | Area | Methods |
 |------|---------|
@@ -134,9 +167,11 @@ $posClient = Foodlite::zomatoPos()->client();      // Tims\ZomatoPos\PosClient
 | Outlets | `updateDeliveryCharge`, `getDeliveryStatus`, `updateDeliveryStatus`, `getDeliveryTime`, `addSurgeDeliveryTime`, `getZomatoDeliveryTimings`, `updateZomatoDeliveryTimings`, `getSelfDeliveryTimings`, `updateSelfDeliveryTimings`, `getLogisticsStatus`, `updateSelfDeliveryServiceability` |
 | SDK | `client()` → raw `PosClient` |
 
-Payload shapes follow the partner [Zomato POS API reference](https://www.zomato.com/developer/integration/api-reference/v1/endpoints/).
+POS payload shapes follow the partner [Zomato POS API reference](https://www.zomato.com/developer/integration/api-reference/v1/endpoints/).
 
 ## Custom drivers
+
+Same extension pattern as Socialite community providers:
 
 ```php
 use Tims\Foodlite\Facades\Foodlite;
@@ -163,10 +198,8 @@ Register custom drivers from a service provider `boot()` method.
 ```
 tims/zomato-php-sdk       → Restaurant API SDK (Packagist)
 tims/zomato-pos-php-sdk   → POS Integration SDK (Packagist)
-tims/foodlite             → Laravel manager + drivers (wraps both)
+tims/foodlite             → Laravel manager + drivers (Socialite-style)
 ```
-
-Plain PHP apps can use the SDKs directly. Laravel apps use Foodlite.
 
 ## Testing
 

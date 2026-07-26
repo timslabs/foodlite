@@ -47,16 +47,16 @@ class FoodliteManagerTest extends TestCase
 
     public function test_driver_resolves_zomato_pos(): void
     {
-        $driver = Foodlite::driver('zomato_pos');
+        $driver = Foodlite::driver('zomato-pos');
 
         $this->assertInstanceOf(ZomatoPosDriver::class, $driver);
-        $this->assertSame('zomato_pos', $driver->getName());
+        $this->assertSame('zomato-pos', $driver->getName());
     }
 
     public function test_zomato_pos_driver_builds_sdk_client(): void
     {
         /** @var ZomatoPosDriver $driver */
-        $driver = Foodlite::driver('zomato_pos');
+        $driver = Foodlite::driver('zomato-pos');
         $client = $driver->client();
 
         $this->assertInstanceOf(PosClient::class, $client);
@@ -65,24 +65,28 @@ class FoodliteManagerTest extends TestCase
         $this->assertSame('api-key', $client->http()->getApiKeyHeader());
     }
 
-    public function test_convenience_methods_resolve_typed_drivers(): void
+    public function test_multiple_drivers_work_like_socialite(): void
     {
-        $this->assertInstanceOf(ZomatoDriver::class, Foodlite::zomato());
-        $this->assertInstanceOf(ZomatoPosDriver::class, Foodlite::zomatoPos());
-    }
-
-    public function test_multiple_drivers_can_be_used_together(): void
-    {
+        // Same pattern as Socialite::driver('github') / Socialite::driver('google').
         $discovery = Foodlite::driver('zomato');
-        $pos = Foodlite::driver('zomato_pos');
+        $pos = Foodlite::driver('zomato-pos');
 
         $this->assertInstanceOf(ZomatoDriver::class, $discovery);
         $this->assertInstanceOf(ZomatoPosDriver::class, $pos);
         $this->assertNotSame($discovery, $pos);
 
-        // Cached independently — second resolve returns the same instances.
-        $this->assertSame($discovery, Foodlite::zomato());
-        $this->assertSame($pos, Foodlite::zomatoPos());
+        // Drivers are cached independently by name.
+        $this->assertSame($discovery, Foodlite::driver('zomato'));
+        $this->assertSame($pos, Foodlite::driver('zomato-pos'));
+    }
+
+    public function test_driver_can_be_selected_dynamically(): void
+    {
+        foreach (['zomato', 'zomato-pos'] as $provider) {
+            $driver = Foodlite::driver($provider);
+
+            $this->assertSame($provider, $driver->getName());
+        }
     }
 
     public function test_zomato_driver_respects_custom_base_url(): void

@@ -26,28 +26,6 @@ class FoodliteManager extends Manager
         return $driver;
     }
 
-    /**
-     * Resolve the Zomato Restaurant API driver.
-     */
-    public function zomato(): ZomatoDriver
-    {
-        /** @var ZomatoDriver $driver */
-        $driver = $this->driver('zomato');
-
-        return $driver;
-    }
-
-    /**
-     * Resolve the Zomato POS Integration API driver.
-     */
-    public function zomatoPos(): ZomatoPosDriver
-    {
-        /** @var ZomatoPosDriver $driver */
-        $driver = $this->driver('zomato_pos');
-
-        return $driver;
-    }
-
     protected function createZomatoDriver(): ZomatoDriver
     {
         /** @var array<string, mixed> $config */
@@ -59,7 +37,7 @@ class FoodliteManager extends Manager
     protected function createZomatoPosDriver(): ZomatoPosDriver
     {
         /** @var array<string, mixed> $config */
-        $config = $this->config->get('foodlite.drivers.zomato_pos', []);
+        $config = $this->config->get('foodlite.drivers.zomato-pos', []);
 
         return new ZomatoPosDriver($config);
     }
