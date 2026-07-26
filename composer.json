@@ -1,0 +1,66 @@
+{
+    "name": "tims/foodlite",
+    "description": "Laravel package for multi-provider food API integrations with a unified driver interface",
+    "type": "library",
+    "license": "MIT",
+    "keywords": [
+        "laravel",
+        "food",
+        "zomato",
+        "restaurants",
+        "foodlite",
+        "sdk"
+    ],
+    "authors": [
+        {
+            "name": "TIMS",
+            "homepage": "https://github.com/timslabs"
+        }
+    ],
+    "require": {
+        "php": "^8.2",
+        "illuminate/support": "^10.0|^11.0|^12.0",
+        "tims/zomato-php-sdk": "dev-main"
+    },
+    "require-dev": {
+        "laravel/pint": "^1.18",
+        "orchestra/testbench": "^8.0|^9.0|^10.0",
+        "phpunit/phpunit": "^10.0|^11.0"
+    },
+    "repositories": [
+        {
+            "type": "vcs",
+            "url": "https://github.com/timslabs/zomato-php-sdk"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "Tims\\Foodlite\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Tims\\Foodlite\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "lint": "vendor/bin/pint --test",
+        "lint:fix": "vendor/bin/pint",
+        "test": "vendor/bin/phpunit --configuration phpunit.xml"
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Tims\\Foodlite\\FoodliteServiceProvider"
+            ],
+            "aliases": {
+                "Foodlite": "Tims\\Foodlite\\Facades\\Foodlite"
+            }
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true,
+    "config": {
+        "sort-packages": true
+    }
+}
