@@ -35,5 +35,11 @@ abstract class TestCase extends Orchestra
             'base_url' => null,
             'guzzle' => [],
         ]);
+        $app['config']->set('foodlite.drivers.zomato_pos', [
+            'api_key' => 'test-pos-api-key',
+            'base_url' => null,
+            'api_key_header' => 'api-key',
+            'guzzle' => [],
+        ]);
     }
 }

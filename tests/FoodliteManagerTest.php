@@ -8,10 +8,13 @@ use InvalidArgumentException;
 use Tims\Foodlite\Contracts\Driver;
 use Tims\Foodlite\Drivers\AbstractDriver;
 use Tims\Foodlite\Drivers\ZomatoDriver;
+use Tims\Foodlite\Drivers\ZomatoPosDriver;
 use Tims\Foodlite\Facades\Foodlite;
 use Tims\Foodlite\FoodliteManager;
-use Tims\Zomato\Http\HttpClient;
+use Tims\Zomato\Http\HttpClient as ZomatoHttpClient;
 use Tims\Zomato\ZomatoClient;
+use Tims\ZomatoPos\Http\HttpClient as ZomatoPosHttpClient;
+use Tims\ZomatoPos\PosClient;
 
 class FoodliteManagerTest extends TestCase
 {
@@ -38,8 +41,48 @@ class FoodliteManagerTest extends TestCase
         $client = $driver->client();
 
         $this->assertInstanceOf(ZomatoClient::class, $client);
-        $this->assertSame(HttpClient::BASE_URL, $client->http()->getBaseUrl());
+        $this->assertSame(ZomatoHttpClient::BASE_URL, $client->http()->getBaseUrl());
         $this->assertSame('test-user-key', $client->http()->getUserKey());
+    }
+
+    public function test_driver_resolves_zomato_pos(): void
+    {
+        $driver = Foodlite::driver('zomato_pos');
+
+        $this->assertInstanceOf(ZomatoPosDriver::class, $driver);
+        $this->assertSame('zomato_pos', $driver->getName());
+    }
+
+    public function test_zomato_pos_driver_builds_sdk_client(): void
+    {
+        /** @var ZomatoPosDriver $driver */
+        $driver = Foodlite::driver('zomato_pos');
+        $client = $driver->client();
+
+        $this->assertInstanceOf(PosClient::class, $client);
+        $this->assertSame(ZomatoPosHttpClient::BASE_URL, $client->http()->getBaseUrl());
+        $this->assertSame('test-pos-api-key', $client->http()->getApiKey());
+        $this->assertSame('api-key', $client->http()->getApiKeyHeader());
+    }
+
+    public function test_convenience_methods_resolve_typed_drivers(): void
+    {
+        $this->assertInstanceOf(ZomatoDriver::class, Foodlite::zomato());
+        $this->assertInstanceOf(ZomatoPosDriver::class, Foodlite::zomatoPos());
+    }
+
+    public function test_multiple_drivers_can_be_used_together(): void
+    {
+        $discovery = Foodlite::driver('zomato');
+        $pos = Foodlite::driver('zomato_pos');
+
+        $this->assertInstanceOf(ZomatoDriver::class, $discovery);
+        $this->assertInstanceOf(ZomatoPosDriver::class, $pos);
+        $this->assertNotSame($discovery, $pos);
+
+        // Cached independently — second resolve returns the same instances.
+        $this->assertSame($discovery, Foodlite::zomato());
+        $this->assertSame($pos, Foodlite::zomatoPos());
     }
 
     public function test_zomato_driver_respects_custom_base_url(): void
